@@ -1,0 +1,20 @@
+[package]
+name = "attempt"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+prost = "0.10"
+bytes = "1"
+protobuf = "3.1.0"
+protobuf-parse = "3.1.0"
+
+[dependencies.tokio]
+version = "1"
+features = ["rt-multi-thread", "macros"]
+
+[dependencies.tonic]
+version = "0.7"
+
+[build-dependencies]
+tonic-build = "0.7"
