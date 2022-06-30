@@ -8,6 +8,7 @@ prost = "0.10"
 bytes = "1"
 protobuf = "3.1.0"
 protobuf-parse = "3.1.0"
+protobuf-json-mapping = "3.1.0"
 
 [dependencies.tokio]
 version = "1"
