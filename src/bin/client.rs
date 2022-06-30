@@ -32,8 +32,29 @@ fn dyn_request() -> DynRequest {
         .message_by_package_relative_name("HelloRequest")
         .unwrap();
     let mut mmm = mmm_descriptor.new_instance();
-    let aaa_field = mmm_descriptor.field_by_name("name").unwrap();
-    aaa_field.set_singular_field(&mut *mmm, ReflectValueBox::String("Tonic".into()));
+    let age_field = mmm_descriptor.field_by_name("age").unwrap();
+    age_field.set_singular_field(&mut *mmm, ReflectValueBox::I32(200));
+    mmm
+}
+
+fn decode_response(buffer: &[u8]) -> DynResponse {
+    let mut file_descriptor_protos = protobuf_parse::Parser::new()
+        .protoc()
+        .includes(&["proto"])
+        .input("proto/helloworld.proto")
+        .parse_and_typecheck()
+        .unwrap()
+        .file_descriptors;
+    assert_eq!(1, file_descriptor_protos.len());
+
+    let file_descriptor_proto: FileDescriptorProto = file_descriptor_protos.pop().unwrap();
+    let file_descriptor: FileDescriptor =
+        FileDescriptor::new_dynamic(file_descriptor_proto, &[]).unwrap();
+    let mmm_descriptor = file_descriptor
+        .message_by_package_relative_name("HelloReply")
+        .unwrap();
+    let mut mmm = mmm_descriptor.new_instance();
+    mmm.merge_from_bytes_dyn(buffer).unwrap();
     mmm
 }
 
@@ -70,10 +91,8 @@ impl Decoder for DynCodec {
     type Item = DynResponse;
     type Error = Status;
     fn decode(&mut self, src: &mut DecodeBuf<'_>) -> Result<Option<Self::Item>, Self::Error> {
-        let mut bytes = vec![];
-        src.copy_to_slice(&mut bytes);
-        println!("{}", bytes.len());
-        Ok(None)
+        let resp = decode_response(src.chunk());
+        Ok(Some(resp))
     }
 }
 
@@ -82,16 +101,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let uri = Uri::builder()
         .scheme("http")
         .authority("127.0.0.1:8080")
-        .path_and_query("/helloworld.Greeter/SayHello")
+        .path_and_query("")
         .build()
         .unwrap();
     let chan = Channel::builder(uri).connect().await.unwrap();
     let mut client = Grpc::new(chan);
     let req = dyn_request().into_request();
-    let path = PathAndQuery::from_str("/helloworld.Greeter/SayHello").unwrap();
+    let path = PathAndQuery::from_static("/helloworld.Greeter/SayHello");
     client.ready().await.unwrap();
     let resp = client.unary(req, path, DynCodec).await;
     println!("{:#?}", resp);
-
     Ok(())
 }

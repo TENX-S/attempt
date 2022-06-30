@@ -1,3 +1,4 @@
+use tonic::codegen::http::request;
 use tonic::{transport::Server, Request, Response, Status};
 
 use hello_world::greeter_server::{Greeter, GreeterServer};
@@ -17,9 +18,10 @@ impl Greeter for MyGreeter {
         request: Request<HelloRequest>,
     ) -> Result<Response<HelloReply>, Status> {
         println!("Got a request from {:?}", request.remote_addr());
-
+        let age = request.into_inner().age;
+        println!("{}", age);
         let reply = hello_world::HelloReply {
-            message: format!("Hello {}!", request.into_inner().name),
+            message: format!("Hello {}!", age),
         };
         Ok(Response::new(reply))
     }
