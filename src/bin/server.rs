@@ -1,6 +1,10 @@
-use tonic::{transport::Server, Request, Response, Status};
+extern crate core;
+
+use tokio_stream::StreamExt;
+use tonic::{transport::Server, Request, Response, Status, Streaming};
 
 use hello_world::greeter_server::{Greeter, GreeterServer};
+use hello_world::Number;
 use hello_world::{HelloReply, HelloRequest};
 
 pub mod hello_world {
@@ -21,6 +25,19 @@ impl Greeter for MyGreeter {
             message: format!("Hello {}!", request.into_inner().name),
         };
         Ok(Response::new(reply))
+    }
+
+    async fn calc_sum(
+        &self,
+        request: Request<Streaming<Number>>,
+    ) -> Result<Response<Number>, Status> {
+        println!("Got a request from {:?}", request.remote_addr());
+        let mut stream = request.into_inner();
+        let mut number = Number::default();
+        while let Some(Ok(num)) = stream.next().await {
+            number.data += num.data
+        }
+        Ok(Response::new(number))
     }
 }
 

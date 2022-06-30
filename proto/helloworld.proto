@@ -4,6 +4,13 @@ package helloworld;
 
 service Greeter {
   rpc SayHello (HelloRequest) returns (HelloReply) {}
+  rpc CalcSum(stream Number) returns (Number) {}
+//  rpc GetFactor(Number) returns (stream Number) {}
+//  rpc CalcSquare(stream Number) returns (stream Number) {}
+}
+
+message Number {
+  int32 data = 1;
 }
 
 message HelloRequest {
