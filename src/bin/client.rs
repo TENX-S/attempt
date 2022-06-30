@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use bytes::{Buf, BufMut};
 use tonic::client::Grpc;
 use tonic::codegen::http::uri::PathAndQuery;
@@ -15,7 +13,7 @@ use tonic::codec::{Codec, DecodeBuf, Decoder, EncodeBuf, Encoder};
 type DynRequest = Box<dyn MessageDyn>;
 type DynResponse = Box<dyn MessageDyn>;
 
-fn dyn_request() -> DynRequest {
+fn make_request() -> DynRequest {
     let mut file_descriptor_protos = protobuf_parse::Parser::new()
         .protoc()
         .includes(&["proto"])
@@ -32,12 +30,14 @@ fn dyn_request() -> DynRequest {
         .message_by_package_relative_name("HelloRequest")
         .unwrap();
     let mut mmm = mmm_descriptor.new_instance();
-    let age_field = mmm_descriptor.field_by_name("age").unwrap();
-    age_field.set_singular_field(&mut *mmm, ReflectValueBox::I32(200));
+    let age_field = mmm_descriptor.field_by_name("name").unwrap();
+    age_field.set_singular_field(&mut *mmm, ReflectValueBox::String("World".into()));
+    let json = protobuf_json_mapping::print_to_string(&*mmm).unwrap();
+    println!("request: {}", json);
     mmm
 }
 
-fn decode_response(buffer: &[u8]) -> DynResponse {
+fn get_response(buffer: &[u8]) -> DynResponse {
     let mut file_descriptor_protos = protobuf_parse::Parser::new()
         .protoc()
         .includes(&["proto"])
@@ -55,6 +55,9 @@ fn decode_response(buffer: &[u8]) -> DynResponse {
         .unwrap();
     let mut mmm = mmm_descriptor.new_instance();
     mmm.merge_from_bytes_dyn(buffer).unwrap();
+    let json = protobuf_json_mapping::print_to_string(&*mmm).unwrap();
+    println!("reply: {}", json);
+    // println!("{:#?}", mmm.descriptor_dyn().field_by_name("message").unwrap().proto());
     mmm
 }
 
@@ -91,7 +94,7 @@ impl Decoder for DynCodec {
     type Item = DynResponse;
     type Error = Status;
     fn decode(&mut self, src: &mut DecodeBuf<'_>) -> Result<Option<Self::Item>, Self::Error> {
-        let resp = decode_response(src.chunk());
+        let resp = get_response(src.chunk());
         Ok(Some(resp))
     }
 }
@@ -106,7 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap();
     let chan = Channel::builder(uri).connect().await.unwrap();
     let mut client = Grpc::new(chan);
-    let req = dyn_request().into_request();
+    let req = make_request().into_request();
     let path = PathAndQuery::from_static("/helloworld.Greeter/SayHello");
     client.ready().await.unwrap();
     let resp = client.unary(req, path, DynCodec).await;
