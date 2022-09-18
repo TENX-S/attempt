@@ -1,12 +1,14 @@
 syntax = "proto3";
 
+option go_package = "github.com/TENX-S/attempt/server";
+
 package helloworld;
 
 service Greeter {
   rpc SayHello (HelloRequest) returns (HelloReply) {}
   rpc CalcSum(stream Number) returns (Number) {}
-//  rpc GetFactor(Number) returns (stream Number) {}
-//  rpc CalcSquare(stream Number) returns (stream Number) {}
+  rpc GetOnes(Number) returns (stream Number) {}
+  rpc GetDoubles(stream Number) returns (stream Number) {}
 }
 
 message Number {

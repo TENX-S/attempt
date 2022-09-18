@@ -1,6 +1,13 @@
+#![feature(generators)]
+
 extern crate core;
 
-use tokio_stream::StreamExt;
+// fn main() {}
+
+use futures::{Stream, StreamExt};
+use std::pin::Pin;
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
 use tonic::{transport::Server, Request, Response, Status, Streaming};
 
 use hello_world::greeter_server::{Greeter, GreeterServer};
@@ -38,6 +45,47 @@ impl Greeter for MyGreeter {
             number.data += num.data
         }
         Ok(Response::new(number))
+    }
+
+    type GetOnesStream = ReceiverStream<Result<Number, Status>>;
+
+    async fn get_ones(
+        &self,
+        request: Request<Number>,
+    ) -> Result<Response<Self::GetOnesStream>, Status> {
+        println!("Got a request from {:?}", request.remote_addr());
+        let num = request.into_inner().data as usize;
+        let (tx, rx) = mpsc::channel(num);
+
+        tokio::spawn(async move {
+            for _ in 1..=num {
+                let number = Number { data: 1 };
+                tx.send(Ok(number)).await.unwrap();
+            }
+        });
+        Ok(Response::new(ReceiverStream::new(rx)))
+    }
+
+    type GetDoublesStream = Pin<Box<dyn Stream<Item = Result<Number, Status>> + Send + 'static>>;
+
+    async fn get_doubles(
+        &self,
+        request: Request<Streaming<Number>>,
+    ) -> Result<Response<Self::GetDoublesStream>, Status> {
+        println!("Got a request from {:?}", request.remote_addr());
+        let stream = request.into_inner();
+        // let (tx, rx) = mpsc::unbounded_channel();
+        let output = async_stream::try_stream! {
+            while let Some(num) = stream.next().await {
+                tokio::spawn(async move {
+                    let num = num.unwrap();
+                    for _ in 1..=num.data {
+                        yield Number { data: 2}
+                    }
+                });
+            }
+        };
+        Ok(Response::new(Box::pin(output) as Self::GetDoublesStream))
     }
 }
 

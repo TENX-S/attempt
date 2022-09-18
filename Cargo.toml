@@ -4,20 +4,32 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1"
 prost = "0.10"
 bytes = "1"
-protobuf = "3.1.0"
 protobuf-parse = "3.1.0"
 protobuf-json-mapping = "3.1.0"
-tokio-stream = "0.1.9"
+tokio-stream = "0.1"
 futures = "0.3"
+http = "0.2"
+async-stream = "0.3"
+
+[dependencies.protobuf]
+version = "3"
+features = ["with-bytes"]
 
 [dependencies.tokio]
 version = "1"
-features = ["rt-multi-thread", "macros"]
+features = ["rt-multi-thread", "macros","sync", "time"]
 
 [dependencies.tonic]
 version = "0.7"
+# default-features = false
+# features = ["transport", "tls", "tls-roots", "compression"]
+
+[dependencies.diesel]
+version = "1"
+features = ["sqlite"]
 
 [build-dependencies]
 tonic-build = "0.7"
